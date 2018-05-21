@@ -1,0 +1,4 @@
+rootProject.name = 'kmulti-serialization'
+include ':kmulti-serialization-jvm'
+include ':kmulti-serialization-js'
+include ':kmulti-serialization-common'

@@ -1,0 +1,135 @@
+buildscript {
+    apply from: 'versions.gradle'
+
+    repositories {
+        maven { url "https://kotlin.bintray.com/kotlinx" }
+        mavenCentral()
+        jcenter()
+    }
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "org.jetbrains.kotlinx:kotlinx-gradle-serialization-plugin:$serialization_version"
+    }
+}
+
+plugins {
+    id "com.jfrog.bintray" version "1.8.0"
+    id "com.moowork.node" version "1.2.0"
+}
+
+allprojects {
+    group 'io.github.kmulti'
+    version '1.2.41.1'
+
+    repositories {
+        maven { url "https://kotlin.bintray.com/kotlinx" }
+        mavenCentral()
+    }
+}
+
+apply plugin: "kotlin"
+
+subprojects {
+
+    apply plugin: 'maven-publish'
+    apply plugin: 'com.jfrog.bintray'
+
+    afterEvaluate {
+        task sourceJar(type: Jar, dependsOn: classes) {
+            classifier 'sources'
+            from sourceSets.main.kotlin
+            duplicatesStrategy = "exclude"
+            def platformSrc = sourceSets.main.kotlin
+            def commonSrc = project(':kmulti-serialization-common').sourceSets.main.kotlin
+            from (platformSrc + commonSrc)
+        }
+
+        task javadocJar(type: Jar, dependsOn: javadoc) {
+            classifier = 'javadoc'
+            from javadoc.destinationDir
+        }
+    }
+
+    def varintName = "${project.name}"
+    tasks.withType(Jar) {
+        archivesBaseName = varintName
+    }
+
+    // Create the pom configuration:
+    def pomConfig = {
+        name "kmulti-serialization"
+        description "kmulti-serialization $version - Kotlin multiplatform serialization utilities"
+        url "https://github.com/kmulti/kmulti-serialization"
+
+        scm {
+            url "https://github.com/kmulti/kmulti-serialization/tree/master"
+            connection "scm:git:git://github.com/kmulti/kmulti-serialization.git"
+            developerConnection "scm:git:ssh://github.com:kmulti/kmulti-serialization.git"
+        }
+        licenses {
+            license {
+                name "The Apache Software License, Version 2.0"
+                url "http://www.apache.org/licenses/LICENSE-2.0.txt"
+            }
+        }
+        developers {
+            developer {
+                name "Marcin Moskala"
+            }
+
+            developer {
+                id "abissell"
+                name "Andrew Bissell"
+                email "abissell@gmail.com"
+            }
+        }
+    }
+
+    publishing {
+        publications {
+            mavenProject(MavenPublication) {
+                from components.java
+                groupId project.group
+                artifactId varintName
+                version project.version
+
+                pom.withXml {
+                    def root = asNode()
+                    root.appendNode('description', "kmulti-serialization $version - Kotlin multiplatform serialization utilities")
+                    root.children().last() + pomConfig
+                }
+
+                artifact sourceJar {
+                    classifier "sources"
+                }
+
+                artifact javadocJar {
+                    classifier "javadoc"
+                }
+            }
+        }
+    }
+
+    bintray {
+        user = System.getProperty('bintray.user')
+        key = System.getProperty('bintray.key')
+        publications = ['mavenProject']
+        pkg {
+            repo = 'kmulti-serialization'
+            name = 'kmulti-serialization'
+            userOrg = 'kmulti'
+            licenses = ['Apache-2.0']
+            vcsUrl = 'https://github.com/kmulti/kmulti-serialization'
+            websiteUrl = 'https://github.com/kmulti/kmulti-serialization'
+            issueTrackerUrl = 'https://github.com/kmulti/kmulti-serialization/issues'
+
+            githubRepo = 'kmulti/kmulti-serialization'
+            version {
+                name = project.version
+                desc = "kmulti-serialization - Kotlin multiplatform serialization utilities"
+                released = new Date()
+            }
+        }
+    }
+}
